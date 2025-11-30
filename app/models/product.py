@@ -1,11 +1,14 @@
-from sqlmodel import SQLModel, Field
+from datetime import datetime
 from typing import Optional
-import uuid
+from sqlmodel import SQLModel, Field
 
 class Product(SQLModel, table=True):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    """Producto de inventario."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    code: str = Field(index=True, unique=True)
     name: str
     category: Optional[str] = None
     stock: float = 0
     price: float
-    created_by: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)

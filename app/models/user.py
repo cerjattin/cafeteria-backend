@@ -1,11 +1,12 @@
-from sqlmodel import SQLModel, Field
 from typing import Optional
-import uuid
+from datetime import datetime
+from sqlmodel import SQLModel, Field
 
 class User(SQLModel, table=True):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    id: Optional[int] = Field(default=None, primary_key=True)
     full_name: str
     email: str = Field(index=True, unique=True)
     hashed_password: str
-    role: str = "user"
+    role: str = Field(default="user", index=True)  # "admin", "cashier", etc.
     is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
