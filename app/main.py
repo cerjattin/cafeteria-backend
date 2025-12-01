@@ -6,10 +6,14 @@ from app.api.v1.router import api_router
 
 app = FastAPI(title=settings.APP_NAME)
 
+origins = [ 
+    "https://*.vercel.app",
+    "http://localhost:3000",]
+
 # CORS para React/Vercel
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ajustar cuando deployes
+    allow_origins=origins,  # ajustar cuando deployes
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
