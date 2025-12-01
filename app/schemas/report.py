@@ -1,14 +1,18 @@
-from pydantic import BaseModel
-from typing import List
 from datetime import datetime
+from typing import List
+
+from pydantic import BaseModel
+
 
 class ReportItem(BaseModel):
     name: str
     units: int
 
+
 class SalesTimePoint(BaseModel):
     timestamp: datetime
     total: float
+
 
 class SalesReport(BaseModel):
     start_date: datetime

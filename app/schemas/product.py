@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 
 class ProductBase(BaseModel):
     code: str
@@ -9,8 +11,10 @@ class ProductBase(BaseModel):
     stock: float = 0
     is_active: bool = True
 
+
 class ProductCreate(ProductBase):
     pass
+
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -19,8 +23,8 @@ class ProductUpdate(BaseModel):
     stock: Optional[float] = None
     is_active: Optional[bool] = None
 
+
 class ProductResponse(ProductBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
 
 class BusinessSettingsBase(BaseModel):
     business_name: str
@@ -6,11 +7,12 @@ class BusinessSettingsBase(BaseModel):
     currency_symbol: str
     low_stock_threshold: int
 
+
 class BusinessSettingsUpdate(BusinessSettingsBase):
     pass
+
 
 class BusinessSettingsResponse(BusinessSettingsBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

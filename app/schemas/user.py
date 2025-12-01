@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr, ConfigDict
+
 
 # ---- Base / lectura ----
 
@@ -13,8 +15,8 @@ class UserBase(BaseModel):
 class UserResponse(UserBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    # Pydantic v2: reemplaza orm_mode
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---- Crear / actualizar ----

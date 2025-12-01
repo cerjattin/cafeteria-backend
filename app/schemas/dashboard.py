@@ -1,8 +1,9 @@
-from datetime import datetime, date
+from datetime import datetime
 from typing import List
 
 from pydantic import BaseModel
-from app.schemas.report import SalesTimePoint  # ya lo tienes
+
+from app.schemas.report import SalesTimePoint
 
 
 class DashboardKPIs(BaseModel):
@@ -24,4 +25,4 @@ class DashboardSummary(BaseModel):
     today: DashboardKPIs
     last_7_days: DashboardKPIs
     low_stock_products: List[LowStockProduct]
-    sales_over_time: List[SalesTimePoint]  # para gráfico de línea en el dashboard
+    sales_over_time: List[SalesTimePoint]

@@ -50,7 +50,24 @@ class OrderRepository:
 
         return session.exec(statement).all()
 
+    # ---- Listar órdenes entre fechas (requerido por dashboard/reportes) ----
+    def list_between_dates(self, session: Session, start: datetime, end: datetime) -> List[Order]:
+        statement = (
+            select(Order)
+            .where(Order.created_at >= start)
+            .where(Order.created_at <= end)
+            .order_by(Order.created_at.desc())
+        )
+        return session.exec(statement).all()
+
     # ---- Eliminar / anular orden ----
     def delete(self, session: Session, order: Order):
+        # 1. Borrar ítems primero
+        for item in order.items:
+            session.delete(item)
+
+        session.flush()
+
+        # 2. Ahora sí borrar la orden
         session.delete(order)
         session.commit()
