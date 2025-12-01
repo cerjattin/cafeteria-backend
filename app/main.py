@@ -24,3 +24,7 @@ def on_startup():
     create_db_and_tables()
 
 app.include_router(api_router, prefix=settings.API_PREFIX)
+
+@app.get("/")
+def root():
+    return {"message": "Cafeteria Backend API Running 🚀"}
