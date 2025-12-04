@@ -20,10 +20,6 @@ class OrderItemResponse(BaseModel):
     qty: float
     price: float
 
-    # Antes tenías:
-    #   class Config:
-    #       orm_mode = True
-    # En Pydantic v2 se reemplaza por:
     model_config = ConfigDict(from_attributes=True)
 
 

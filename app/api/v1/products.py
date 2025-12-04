@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from sqlmodel import Session
-
+from sqlmodel import select
 from app.core.database import get_session
 from app.core.auth import get_current_admin
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
 from app.repositories.product_repository import ProductRepository
 from app.services.product_service import ProductService
 from app.models.product import Product
+
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -91,3 +92,16 @@ def adjust_stock(
     qty puede ser positivo o negativo.
     """
     return service.adjust_stock(session, product_id, qty)
+
+@router.get("/categories", response_model=list[str])
+def list_categories(session: Session = Depends(get_session)):
+    """
+    Devuelve categorías únicas según el campo 'category' de product.
+    """
+    results = session.exec(
+        select(Product.category).distinct()
+    ).all()
+
+    # Filtra nulos y ordena
+    return sorted([c for c in results if c])
+
