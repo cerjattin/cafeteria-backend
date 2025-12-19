@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.core.db import get_session
+from app.core.database import get_session
 from app.models.category import Category
 from app.schemas.category import CategoryCreate, CategoryRead, CategoryUpdate
 

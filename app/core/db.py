@@ -3,5 +3,5 @@ Alias de compatibilidad: expone get_session para routers nuevos.
 Ajusta el import al archivo real donde está tu get_session.
 """
 
-# OPCIÓN A (la más común): si get_session está en app/db.py
-from app.core.db import get_session  # noqa: F401
+# OPCIÓN A (la más común): si get_session está en app/core/database.py
+from app.core.database import get_session  # noqa: F401
