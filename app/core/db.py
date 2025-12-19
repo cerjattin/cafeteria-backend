@@ -4,4 +4,4 @@ Ajusta el import al archivo real donde está tu get_session.
 """
 
 # OPCIÓN A (la más común): si get_session está en app/db.py
-from app.db import get_session  # noqa: F401
+from app.core.db import get_session  # noqa: F401
