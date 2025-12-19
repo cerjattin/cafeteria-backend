@@ -1,7 +1,8 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.product import Product
+if TYPE_CHECKING:
+    from app.models.product import Product  # solo para typing (no en runtime)
 
 class Category(SQLModel, table=True):
     __tablename__ = "categories"

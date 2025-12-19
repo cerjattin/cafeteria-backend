@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 
-from app.models.category import Category
+if TYPE_CHECKING:
+    from app.models.category import Category  # solo typing
 
 class Product(SQLModel, table=True):
     """Producto de inventario."""
@@ -12,7 +13,6 @@ class Product(SQLModel, table=True):
     code: str = Field(index=True, unique=True)
     name: str
 
-    # ✅ NUEVO: FK real
     category_id: Optional[int] = Field(default=None, foreign_key="categories.id", index=True)
     category: Optional["Category"] = Relationship(back_populates="products")
 
