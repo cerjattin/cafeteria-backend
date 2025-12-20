@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlmodel import Session
-
+from typing import Optional, List
 from app.repositories.product_repository import ProductRepository
 from app.models.product import Product
 from app.models.category import Category
@@ -75,4 +75,28 @@ class ProductService:
     
     def list(self, session: Session):
         return repo.list(session)
+    
+
+
+    def list(
+        self,
+        session: Session,
+        search: Optional[str] = None,
+        category_id: Optional[int] = None,
+        category_name: Optional[str] = None,
+        active_only: bool = True,
+        skip: int = 0,
+        limit: int = 50
+        ) -> List[Product]:
+    
+        return repo.list(
+            session=session,
+            search=search,
+            category_id=category_id,
+            category_name=category_name,
+            active_only=active_only,
+            skip=skip,
+            limit=limit
+        )
+
 

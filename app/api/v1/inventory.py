@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlmodel import Session
-
+from typing import Optional
 from app.core.database import get_session
 from app.services.inventory_service import InventoryService
 from app.services.product_service import ProductService
@@ -75,3 +75,25 @@ def update_product(product_id: int, payload: ProductUpdate, session: Session = D
 def adjust_stock(product_id: int, qty: float, session: Session = Depends(get_session)):
     product = product_service.adjust_stock(session, product_id, qty)
     return to_product_read(product)
+
+
+@router.get("/products", response_model=list[ProductRead])
+def list_products(
+    search: Optional[str] = None,
+    category_id: Optional[int] = None,
+    category_name: Optional[str] = None,
+    active_only: bool = True,
+    skip: int = 0,
+    limit: int = 50,
+    session: Session = Depends(get_session),
+):
+    products = product_service.list(
+        session=session,
+        search=search,
+        category_id=category_id,
+        category_name=category_name,
+        active_only=active_only,
+        skip=skip,
+        limit=limit
+    )
+    return [to_product_read(p) for p in products]

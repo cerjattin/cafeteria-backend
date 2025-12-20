@@ -1,11 +1,15 @@
 import pandas as pd
 from io import BytesIO
 from fastapi import HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
+
 from app.repositories.product_repository import ProductRepository
 from app.schemas.inventory import InventoryUploadResponse, InventoryUploadSummary
+from app.models.product import Product
+from app.models.category import Category
 
 repo = ProductRepository()
+
 
 class InventoryService:
 
@@ -24,11 +28,14 @@ class InventoryService:
             else:
                 raise HTTPException(status_code=400, detail=f"Tipo de archivo no soportado: {file_type}")
 
+            # Normalizar nombres de columnas (por si vienen CODE, Name, etc.)
+            df.columns = [str(c).strip().lower() for c in df.columns]
+
             required_cols = {"code", "name", "price", "stock"}
-            if not required_cols.issubset(df.columns.str.lower()):
+            if not required_cols.issubset(set(df.columns)):
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Las columnas requeridas son: {', '.join(required_cols)}"
+                    detail=f"Las columnas requeridas son: {', '.join(sorted(required_cols))}"
                 )
 
             updated = 0
@@ -36,36 +43,76 @@ class InventoryService:
             errors = 0
             error_messages: list[str] = []
 
+            # Helpers internos
+            def get_or_create_category_id(category_name: str) -> int:
+                """Busca o crea una categoría por nombre y devuelve su id."""
+                name_clean = category_name.strip()
+                existing_cat = session.exec(select(Category).where(Category.name == name_clean)).first()
+                if existing_cat:
+                    return existing_cat.id
+
+                new_cat = Category(name=name_clean)
+                session.add(new_cat)
+                session.commit()
+                session.refresh(new_cat)
+                return new_cat.id
+
+            def parse_category_id(row) -> int | None:
+                """
+                Determina category_id desde:
+                - columna category_id (preferida)
+                - columna category (texto) => busca/crea
+                """
+                # 1) Si viene category_id en el archivo
+                if "category_id" in row and pd.notna(row["category_id"]) and str(row["category_id"]).strip() != "":
+                    try:
+                        return int(float(row["category_id"]))
+                    except Exception:
+                        raise ValueError(f"category_id inválido: {row['category_id']}")
+
+                # 2) Si viene category como texto
+                if "category" in row and pd.notna(row["category"]) and str(row["category"]).strip() != "":
+                    return get_or_create_category_id(str(row["category"]))
+
+                return None
+
             for idx, row in df.iterrows():
                 try:
                     code = str(row["code"]).strip()
                     name = str(row["name"]).strip()
                     price = float(row["price"])
                     stock = float(row["stock"])
-                    category = str(row.get("category", "")).strip() or None
+
+                    if not code:
+                        raise ValueError("code vacío")
+                    if not name:
+                        raise ValueError("name vacío")
+
+                    category_id = parse_category_id(row)
 
                     existing = repo.get_by_code(session, code)
                     if existing:
                         existing.name = name
-                        existing.category = category
                         existing.price = price
                         existing.stock = stock
+                        existing.category_id = category_id
                         repo.save(session, existing)
                         updated += 1
                     else:
-                        from app.models.product import Product
                         product = Product(
                             code=code,
                             name=name,
-                            category=category,
+                            category_id=category_id,
                             price=price,
                             stock=stock,
+                            is_active=True
                         )
                         repo.save(session, product)
                         created += 1
+
                 except Exception as e:
                     errors += 1
-                    error_messages.append(f"Fila {idx}: {e}")
+                    error_messages.append(f"Fila {idx + 1}: {e}")
 
             summary = InventoryUploadSummary(updated=updated, created=created, errors=errors)
             status = "success" if errors == 0 else "partial"
