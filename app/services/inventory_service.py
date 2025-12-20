@@ -1,12 +1,13 @@
 import pandas as pd
 from io import BytesIO
+
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
+from app.models.category import Category
+from app.models.product import Product
 from app.repositories.product_repository import ProductRepository
 from app.schemas.inventory import InventoryUploadResponse, InventoryUploadSummary
-from app.models.product import Product
-from app.models.category import Category
 
 repo = ProductRepository()
 
@@ -14,7 +15,15 @@ repo = ProductRepository()
 class InventoryService:
 
     def process_inventory_file(self, session: Session, file_content: bytes, file_type: str) -> InventoryUploadResponse:
-        """Carga masiva de inventario desde CSV o Excel."""
+        """Carga masiva de inventario desde CSV o Excel.
+
+        Columnas requeridas:
+        - code, name, price, stock
+
+        Columnas opcionales (para categorías):
+        - category_id (int)
+        - category (texto) -> busca/crea en tabla categories
+        """
         try:
             buffer = BytesIO(file_content)
 
@@ -28,14 +37,14 @@ class InventoryService:
             else:
                 raise HTTPException(status_code=400, detail=f"Tipo de archivo no soportado: {file_type}")
 
-            # Normalizar nombres de columnas (por si vienen CODE, Name, etc.)
+            # Normalizar nombres de columnas
             df.columns = [str(c).strip().lower() for c in df.columns]
 
             required_cols = {"code", "name", "price", "stock"}
             if not required_cols.issubset(set(df.columns)):
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Las columnas requeridas son: {', '.join(sorted(required_cols))}"
+                    detail=f"Las columnas requeridas son: {', '.join(sorted(required_cols))}",
                 )
 
             updated = 0
@@ -43,34 +52,27 @@ class InventoryService:
             errors = 0
             error_messages: list[str] = []
 
-            # Helpers internos
             def get_or_create_category_id(category_name: str) -> int:
-                """Busca o crea una categoría por nombre y devuelve su id."""
                 name_clean = category_name.strip()
-                existing_cat = session.exec(select(Category).where(Category.name == name_clean)).first()
-                if existing_cat:
-                    return existing_cat.id
+                existing = session.exec(select(Category).where(Category.name == name_clean)).first()
+                if existing:
+                    return existing.id
 
-                new_cat = Category(name=name_clean)
-                session.add(new_cat)
+                cat = Category(name=name_clean)
+                session.add(cat)
                 session.commit()
-                session.refresh(new_cat)
-                return new_cat.id
+                session.refresh(cat)
+                return cat.id
 
             def parse_category_id(row) -> int | None:
-                """
-                Determina category_id desde:
-                - columna category_id (preferida)
-                - columna category (texto) => busca/crea
-                """
-                # 1) Si viene category_id en el archivo
+                # 1) category_id
                 if "category_id" in row and pd.notna(row["category_id"]) and str(row["category_id"]).strip() != "":
                     try:
                         return int(float(row["category_id"]))
                     except Exception:
                         raise ValueError(f"category_id inválido: {row['category_id']}")
 
-                # 2) Si viene category como texto
+                # 2) category (texto)
                 if "category" in row and pd.notna(row["category"]) and str(row["category"]).strip() != "":
                     return get_or_create_category_id(str(row["category"]))
 
@@ -105,7 +107,7 @@ class InventoryService:
                             category_id=category_id,
                             price=price,
                             stock=stock,
-                            is_active=True
+                            is_active=True,
                         )
                         repo.save(session, product)
                         created += 1

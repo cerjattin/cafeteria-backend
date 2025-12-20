@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from sqlmodel import Session
-from sqlmodel import select
 from app.core.database import get_session
 from app.core.auth import get_current_admin
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
@@ -18,16 +17,32 @@ service = ProductService()
 
 # -------------- LISTAR -----------------
 
+def _to_product_response(product: Product) -> ProductResponse:
+    return ProductResponse(
+        id=product.id,
+        code=product.code,
+        name=product.name,
+        price=product.price,
+        stock=product.stock,
+        is_active=product.is_active,
+        created_at=product.created_at,
+        category_id=product.category_id,
+        category_name=product.category.name if product.category else None,
+    )
+
+
 @router.get("/", response_model=List[ProductResponse])
 def list_products(
     search: Optional[str] = Query(None, description="Buscar por nombre o código"),
-    category_id: Optional[int] = 0,
+    category_id: Optional[int] = None,
+    category_name: Optional[str] = None,
     active_only: bool = True,
     skip: int = 0,
     limit: int = 50,
     session: Session = Depends(get_session),
 ):
-    return repo.list(session, search, category_id, active_only, skip, limit)
+    products = repo.list(session, search, category_id, category_name, active_only, skip, limit)
+    return [_to_product_response(p) for p in products]
 
 
 # -------------- VER -----------------
@@ -40,7 +55,7 @@ def get_product(
     product = repo.get_by_id(session, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    return product
+    return _to_product_response(product)
 
 
 # -------------- CREAR -----------------
@@ -51,7 +66,10 @@ def create_product(
     session: Session = Depends(get_session),
     admin = Depends(get_current_admin)
 ):
-    return service.create(session, data)
+    product = service.create(session, data)
+    # Asegurar category cargada para category_name
+    product = repo.get_by_id(session, product.id) or product
+    return _to_product_response(product)
 
 
 # -------------- EDITAR -----------------
@@ -63,7 +81,9 @@ def update_product(
     session: Session = Depends(get_session),
     admin = Depends(get_current_admin)
 ):
-    return service.update(session, product_id, data)
+    product = service.update(session, product_id, data)
+    product = repo.get_by_id(session, product.id) or product
+    return _to_product_response(product)
 
 
 # -------------- DESACTIVAR -----------------
@@ -91,17 +111,8 @@ def adjust_stock(
     Ajusta el stock manualmente (para correcciones, mermas, inventarios).
     qty puede ser positivo o negativo.
     """
-    return service.adjust_stock(session, product_id, qty)
+    product = service.adjust_stock(session, product_id, qty)
+    product = repo.get_by_id(session, product.id) or product
+    return _to_product_response(product)
 
-@router.get("/categories", response_model=list[str])
-def list_categories(session: Session = Depends(get_session)):
-    """
-    Devuelve categorías únicas según el campo 'category' de product.
-    """
-    results = session.exec(
-        select(Product.category).distinct()
-    ).all()
-
-    # Filtra nulos y ordena
-    return sorted([c for c in results if c])
 

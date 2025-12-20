@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 
@@ -33,10 +34,10 @@ class ProductRepository:
         session: Session,
         search: Optional[str] = None,
         category_id: Optional[int] = None,
-        category_name: Optional[str] = None,  # compat opcional
+        category_name: Optional[str] = None,
         active_only: bool = True,
         skip: int = 0,
-        limit: int = 50
+        limit: int = 50,
     ) -> List[Product]:
 
         statement = select(Product).options(selectinload(Product.category))
@@ -45,26 +46,20 @@ class ProductRepository:
             statement = statement.where(Product.is_active == True)
 
         if search:
-            search = f"%{search}%"
+            pattern = f"%{search}%"
             statement = statement.where(
-                (Product.name.ilike(search)) |
-                (Product.code.ilike(search))
+                (Product.name.ilike(pattern)) |
+                (Product.code.ilike(pattern))
             )
 
-        # ✅ Filtro nuevo por FK
         if category_id is not None:
             statement = statement.where(Product.category_id == category_id)
 
-        # 🔁 Compat opcional: filtrar por nombre de categoría
+        # Compat opcional: filtrar por nombre de categoría
         if category_name:
-            statement = (
-                statement
-                .join(Category)
-                .where(Category.name.ilike(f"%{category_name}%"))
-            )
+            statement = statement.join(Category).where(Category.name.ilike(f"%{category_name}%"))
 
         statement = statement.offset(skip).limit(limit)
-
         return session.exec(statement).all()
 
     # ---- Guardar / actualizar ----

@@ -1,18 +1,22 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-class CategoryCreate(BaseModel):
+
+class CategoryBase(BaseModel):
     name: str
     description: Optional[str] = None
+
+
+class CategoryCreate(CategoryBase):
+    pass
+
 
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
 
-class CategoryRead(BaseModel):
-    id: int
-    name: str
-    description: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+class CategoryRead(CategoryBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
