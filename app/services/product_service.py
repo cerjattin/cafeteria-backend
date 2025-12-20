@@ -3,6 +3,7 @@ from sqlmodel import Session
 
 from app.repositories.product_repository import ProductRepository
 from app.models.product import Product
+from app.models.category import Category
 from app.schemas.product import ProductCreate, ProductUpdate
 
 repo = ProductRepository()
@@ -15,10 +16,19 @@ class ProductService:
         if repo.get_by_code(session, data.code):
             raise HTTPException(status_code=400, detail="El código ya existe")
 
+        # 🔵 Validar categoría si viene
+        if data.category_id is not None:
+            category = session.get(Category, data.category_id)
+            if not category:
+                raise HTTPException(
+                    status_code=400,
+                    detail="La categoría indicada no existe"
+                )
+
         product = Product(
             code=data.code,
             name=data.name,
-            category=data.category,
+            category_id=data.category_id,
             price=data.price,
             stock=data.stock,
             is_active=True
@@ -32,6 +42,15 @@ class ProductService:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
 
         update_data = data.dict(exclude_unset=True)
+
+        # 🔵 Validar cambio de categoría
+        if "category_id" in update_data and update_data["category_id"] is not None:
+            category = session.get(Category, update_data["category_id"])
+            if not category:
+                raise HTTPException(
+                    status_code=400,
+                    detail="La categoría indicada no existe"
+                )
 
         for field, value in update_data.items():
             setattr(product, field, value)
@@ -53,3 +72,7 @@ class ProductService:
 
         product.stock += qty
         return repo.save(session, product)
+    
+    def list(self, session: Session):
+        return repo.list(session)
+

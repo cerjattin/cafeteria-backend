@@ -21,13 +21,13 @@ service = ProductService()
 @router.get("/", response_model=List[ProductResponse])
 def list_products(
     search: Optional[str] = Query(None, description="Buscar por nombre o código"),
-    category: Optional[str] = None,
+    category_id: Optional[int] = 0,
     active_only: bool = True,
     skip: int = 0,
     limit: int = 50,
     session: Session = Depends(get_session),
 ):
-    return repo.list(session, search, category, active_only, skip, limit)
+    return repo.list(session, search, category_id, active_only, skip, limit)
 
 
 # -------------- VER -----------------
